@@ -1,0 +1,7 @@
+{
+  "name": "MythosAI",
+  "description": "An interactive educational platform powered by AI to create, live, and learn through personalized stories. Featuring text, image, and audio generation with a focus on cultural heritage.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
