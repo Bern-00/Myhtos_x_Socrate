@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { STORY_GENRES, AGE_GROUPS, IMAGE_STYLES, LANGUAGES, MEDIA_TYPES, VIDEO_FORMATS } from './constants';
 import { StoryRequest, GeneratedStory, StoryGenre, AgeGroup, ImageStyle, MediaType, HistoryItem, VideoFormat } from './types';
-// --- MODIFICATION ICI : On importe nos nouvelles fonctions ---
+// --- IMPORTS DES SERVICES ---
 import { generateMythosResponse } from './services/geminiService';
 import { generateAudio } from './utils/audioUtils';
-// -------------------------------------------------------------
+// ----------------------------
 import Button from './components/Button';
 import Input from './components/Input';
 import Select from './components/Select';
@@ -129,7 +129,6 @@ const App: React.FC = () => {
       if (e.name === 'QuotaExceededError' || e.code === 22) {
         // Version allégée si localStorage est plein
         const lightItem = { ...newItem, audioUrl: undefined }; 
-        // On ne garde pas l'audio binaire en cache s'il est trop lourd
         const lighterHistory = [lightItem, ...history].slice(0, 5);
         try {
             localStorage.setItem('mythos_history', JSON.stringify(lighterHistory));
@@ -139,7 +138,7 @@ const App: React.FC = () => {
     }
   };
 
-  // --- C'EST ICI QUE LA MAGIE OPÈRE (Integration des 3 APIs) ---
+  // --- FONCTION PRINCIPALE DE GENERATION ---
   const handleGenerate = async (forcedRequest?: StoryRequest) => {
     const request = forcedRequest || {
         topic,
@@ -163,24 +162,22 @@ const App: React.FC = () => {
 
     try {
       // 1. API 1 : GEMINI (Texte + Prompt Image)
-      // Note: On passe le "topic" et si la culture haïtienne est activée
       const promptText = `
         Sujet: ${request.topic}. 
         Style: ${request.genre}. 
         Public: ${request.ageGroup}.
-        ${request.includeHaitianCulture ? "IMPORTANT: Intègre des références culturelles Haïtiennes, des proverbes ou une ambiance locale." : ""}
+        ${request.includeHaitianCulture ? "IMPORTANT: Intègre des références culturelles Haïtiennes." : ""}
       `;
       
-      const { text, imagePrompt } = await generateMythosResponse(promptText);
+      // IMPORTANT : On passe la langue choisie à la fonction
+      const { text, imagePrompt } = await generateMythosResponse(promptText, request.language);
 
       // 2. API 2 : POLLINATIONS AI (Image)
-      // On construit l'URL directement
       const cleanPrompt = encodeURIComponent(imagePrompt + " " + request.imageStyle);
       const seed = Math.floor(Math.random() * 1000);
       const generatedImageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?seed=${seed}&width=1024&height=600&nologo=true`;
 
       // 3. API 3 : ELEVENLABS (Audio)
-      // On ne génère l'audio que si le média le demande
       let audioUrl = null;
       if (request.mediaType !== MediaType.TEXT_ONLY) {
          audioUrl = await generateAudio(text);
@@ -205,7 +202,6 @@ const App: React.FC = () => {
       setLoading(false);
     }
   };
-  // -------------------------------------------------------------
 
   const handleClearHistory = () => {
     setHistory([]);
